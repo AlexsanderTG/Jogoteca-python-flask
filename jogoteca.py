@@ -1,0 +1,85 @@
+from flask import Flask, render_template, request, redirect, session, flash, url_for
+from flask_sqlalchemy import SQLAlchemy
+
+class jogo:
+    def __init__(self, nome, categoria, console):
+        self.nome=nome
+        self.categoria=categoria
+        self.console=console
+class Usuario:
+    def __init__(self, nome, nickname, senha):
+        self.nome = nome
+        self.nickname=nickname
+        self.senha=senha
+usuario1 = Usuario("Alex", "Sam", "EA")
+usuario2 = Usuario("Caolí", "Cal", "shadow")
+usuario3 = Usuario("Gil", "Gil", "GOB")
+usuarios = { usuario1.nickname : usuario1,
+             usuario2.nickname : usuario2,
+             usuario3.nickname : usuario3 }
+jogo1 = jogo('Naruto Storm Connecions', 'Combate', 'Diversos')
+jogo2 = jogo('Fortnite', 'FPS', 'Diversos')
+jogo3 = jogo('Dragon ball xenoverse 2', 'Combate', 'Diversos')
+jogo4 = jogo('saint seiya awakening', 'Estratégia', 'Mobile')
+lista = [jogo1, jogo2, jogo3, jogo4]
+app = Flask(__name__)
+app.secret_key = 'Zhiend'
+
+app.config['SQLALCHEMY_DATABASE_URI'] = \
+    '{SGBD}://{usuario}:{senha}@{servidor}/{database}'.format(
+    SGBD = 'mysql+mysqlconnector',
+    usuario = 'root',
+    senha = 'admin',
+    servidor = 'localhost',
+    database = 'jogoteca'
+    )
+
+db= SQLAlchemy(app)
+
+@app.route('/')
+def index():
+    return render_template('lista.html', titulo='Jogos', jogos=lista)
+
+@app.route('/inicio')
+
+def ola():
+
+    return render_template('lista.html', titulo= "Jogos", jogos=lista);
+
+@app.route('/novo')
+def novo():
+    if 'usuario_logado' not in session or session['usuario_logado']== None:
+        return redirect(url_for('login', proxima=url_for('novo')))
+    return render_template('novo.html', titulo="Novo Jogo");
+
+@app.route('/criar', methods=['POST',])
+def criar():
+    nome = request.form['nome']
+    categoria = request.form['categoria']
+    console = request.form['console']
+    jogox = jogo(nome, categoria, console)
+    lista.append(jogox)
+    return redirect(url_for('index'))
+
+@app.route('/login')
+def login():
+    proxima = request.args.get('proxima')
+    return render_template('login.html', proxima=proxima);
+@app.route('/autenticar', methods=['POST',])
+def autenticar():
+    if request.form['usuario'] in usuarios:
+        usuario= usuarios[request.form['usuario']]
+        if request.form['senha'] == usuario.senha:
+            session['usuario_logado'] = usuario.nickname
+            flash(usuario.nickname + ' logado com sucesso!')
+            proxima_pagina = request.form['proxima']
+            return redirect(proxima_pagina)
+        else:
+            flash('usuario não logado, erro de autentificação!')
+            return redirect(url_for('login'))
+@app.route('/logout')
+def logout():
+    session['usuario_logado'] = None
+    flash('Logout efetuado com sucesso!')
+    return redirect(url_for('index'))
+app.run(debug=True)
